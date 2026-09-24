@@ -8,6 +8,7 @@ interface PuzzleBoardProps {
   gridSize: GridSize;
   pieces: string[];
   showNumbers: boolean;
+  isCompleted?: boolean;
   onTileClick: (position: number) => void;
   onTileSwipe: (position: number, direction: 'up' | 'down' | 'left' | 'right') => void;
 }
@@ -17,6 +18,7 @@ export const PuzzleBoard: React.FC<PuzzleBoardProps> = ({
   gridSize,
   pieces,
   showNumbers,
+  isCompleted = false,
   onTileClick,
   onTileSwipe,
 }) => {
@@ -44,8 +46,9 @@ export const PuzzleBoard: React.FC<PuzzleBoardProps> = ({
         aria-label="スライドパズル盤面"
       >
         {board.map((tileId, position) => {
-          const isBlank = tileId === blankId;
-          const isAdjacentToBlank = !isBlank && canMove(position, blankIndex, gridSize);
+          // 完成時は空白マスにも画像を描画して1枚絵にする
+          const isBlank = tileId === blankId && !isCompleted;
+          const isAdjacentToBlank = !isCompleted && !isBlank && canMove(position, blankIndex, gridSize);
 
           return (
             <div key={position} className="w-full h-full relative" role="gridcell">

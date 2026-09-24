@@ -8,7 +8,7 @@ import { PauseOverlay } from './PauseOverlay';
 import { OriginalImageModal } from './OriginalImageModal';
 import { CompletionDialog } from './CompletionDialog';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { Eye, RotateCcw, Shuffle, Image as ImageIcon, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings } from 'lucide-react';
+import { Eye, RotateCcw, Shuffle, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings, Trophy } from 'lucide-react';
 
 interface PuzzlePlayScreenProps {
   pieces: string[];
@@ -27,7 +27,8 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
 }) => {
   const [showOriginalModal, setShowOriginalModal] = useState(false);
   const [isManualPaused, setIsManualPaused] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<'restart' | 'reshuffle' | 'config' | 'newImage' | null>(null);
+  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'restart' | 'reshuffle' | 'config' | null>(null);
 
   const fullImageDataUrlRef = useRef<string>('');
   if (!fullImageDataUrlRef.current) {
@@ -71,6 +72,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     },
     onCompleted: () => {
       stopTimer();
+      setIsCompletionDialogOpen(true);
     },
   });
 
@@ -133,19 +135,11 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     }
   };
 
-  const handleNewImageClick = () => {
-    if (moves > 0 && !isCompleted) {
-      pauseTimer();
-      setConfirmAction('newImage');
-    } else {
-      onNewImageSelected();
-    }
-  };
-
   const executeRestart = () => {
     restartGame();
     resetTimer();
     startTimer();
+    setIsCompletionDialogOpen(false);
     setConfirmAction(null);
   };
 
@@ -153,6 +147,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     reshuffleGame();
     resetTimer();
     startTimer();
+    setIsCompletionDialogOpen(false);
     setConfirmAction(null);
   };
 
@@ -163,8 +158,6 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
       executeReshuffle();
     } else if (confirmAction === 'config') {
       onBackToConfig?.();
-    } else if (confirmAction === 'newImage') {
-      onNewImageSelected();
     }
   };
 
@@ -177,26 +170,6 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
 
   return (
     <div className="max-w-xl mx-auto px-4 py-4 sm:py-6 flex flex-col items-center">
-      {/* 上部ナビゲーション（設定へ直接戻る / 画像変更） */}
-      <div className="flex items-center justify-between w-full max-w-md mb-2 px-1">
-        <button
-          onClick={handleBackToConfigClick}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 active:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/90 shadow-xs transition-all active:scale-95"
-          title="パズル設定画面に戻る（分割数・難易度・範囲調整）"
-        >
-          <Settings className="w-3.5 h-3.5 text-blue-600" />
-          <span>パズル設定に戻る</span>
-        </button>
-
-        <button
-          onClick={handleNewImageClick}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-200/60 transition-colors"
-        >
-          <ImageIcon className="w-3.5 h-3.5" />
-          <span>別の画像</span>
-        </button>
-      </div>
-
       {/* ヘッダー情報（手数、タイマー、ポーズ、番号トグル） */}
       <PuzzleHeader
         moves={moves}
@@ -214,10 +187,24 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
           gridSize={settings.gridSize}
           pieces={pieces}
           showNumbers={showNumbers}
+          isCompleted={isCompleted}
           onTileClick={moveByTileIndex}
           onTileSwipe={handlePieceSwipe}
         />
       </div>
+
+      {/* 完成時にダイアログを閉じた場合の「結果を再表示」バナー */}
+      {isCompleted && !isCompletionDialogOpen && (
+        <div className="w-full max-w-md mb-4 flex justify-center">
+          <button
+            onClick={() => setIsCompletionDialogOpen(true)}
+            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 animate-bounce"
+          >
+            <Trophy className="w-4 h-4" />
+            <span>完成結果を見る</span>
+          </button>
+        </div>
+      )}
 
       {/* 操作バー */}
       <div className="grid grid-cols-4 gap-2 w-full max-w-md mb-6">
@@ -286,13 +273,13 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
 
       {/* 完成ダイアログ */}
       <CompletionDialog
-        isOpen={isCompleted}
+        isOpen={isCompleted && isCompletionDialogOpen}
         moves={moves}
         seconds={seconds}
         completedImageDataUrl={fullImageDataUrlRef.current}
         onRetry={executeReshuffle}
-        onBackToConfig={onBackToConfig}
         onNewImage={onNewImageSelected}
+        onClose={() => setIsCompletionDialogOpen(false)}
       />
 
       {/* 確認ダイアログ */}
@@ -303,19 +290,15 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
             ? '最初からやり直しますか？'
             : confirmAction === 'reshuffle'
             ? '別の盤面で再シャッフルしますか？'
-            : confirmAction === 'config'
-            ? 'パズル設定に戻りますか？'
-            : '画像選択に戻りますか？'
+            : 'パズル設定に戻りますか？'
         }
         message="現在のパズルの進行状況（手数・経過時間）はリセットされます。"
         confirmLabel={
           confirmAction === 'config'
             ? '設定に戻る'
-            : confirmAction === 'newImage'
-            ? '画像選択へ'
             : 'やり直す'
         }
-        variant={confirmAction === 'newImage' ? 'danger' : 'primary'}
+        variant="primary"
         onConfirm={handleConfirm}
         onCancel={handleCancelConfirm}
       />

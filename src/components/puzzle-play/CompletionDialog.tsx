@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { Trophy, RotateCcw, Image as ImageIcon, Footprints, Clock, Settings } from 'lucide-react';
+import { Trophy, RotateCcw, Image as ImageIcon, Footprints, Clock, X } from 'lucide-react';
 
 interface CompletionDialogProps {
   isOpen: boolean;
@@ -9,8 +9,8 @@ interface CompletionDialogProps {
   seconds: number;
   completedImageDataUrl?: string;
   onRetry: () => void;
-  onBackToConfig?: () => void;
   onNewImage: () => void;
+  onClose: () => void;
 }
 
 export const CompletionDialog: React.FC<CompletionDialogProps> = ({
@@ -19,8 +19,8 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
   seconds,
   completedImageDataUrl,
   onRetry,
-  onBackToConfig,
   onNewImage,
+  onClose,
 }) => {
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -29,7 +29,7 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} showCloseButton={false} maxWidth="max-w-sm">
+    <Modal isOpen={isOpen} onClose={onClose} showCloseButton={true} maxWidth="max-w-sm">
       <div className="flex flex-col items-center text-center">
         {/* トロフィーアイコン */}
         <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center mb-3 animate-bounce">
@@ -82,26 +82,24 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
             同じ設定で再挑戦
           </Button>
 
-          {onBackToConfig && (
-            <Button
-              variant="secondary"
-              size="md"
-              className="w-full"
-              icon={<Settings className="w-4 h-4 text-slate-600" />}
-              onClick={onBackToConfig}
-            >
-              設定を変更する（分割数など）
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            size="md"
+            className="w-full"
+            icon={<ImageIcon className="w-4 h-4 text-slate-600" />}
+            onClick={onNewImage}
+          >
+            新しい画像を選ぶ
+          </Button>
 
           <Button
             variant="ghost"
             size="sm"
             className="w-full text-slate-500 hover:text-slate-800"
-            icon={<ImageIcon className="w-3.5 h-3.5" />}
-            onClick={onNewImage}
+            icon={<X className="w-3.5 h-3.5" />}
+            onClick={onClose}
           >
-            新しい画像を選ぶ
+            閉じる（完成画面を見る）
           </Button>
         </div>
       </div>
