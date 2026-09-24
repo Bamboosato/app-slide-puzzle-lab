@@ -27,11 +27,21 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
   const [isManualPaused, setIsManualPaused] = useState(false);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'restart' | 'reshuffle' | 'config' | null>(null);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fullImageDataUrlRef = useRef<string>('');
   if (!fullImageDataUrlRef.current) {
     fullImageDataUrlRef.current = fullCroppedCanvas.toDataURL('image/jpeg', 0.95);
   }
+
+  // アンマウント時のタイマークリーンアップ
+  useEffect(() => {
+    return () => {
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // タイマーフック
   const {
@@ -69,8 +79,18 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
       }
     },
     onCompleted: () => {
+      // タイマー即時停止（ピース移動は usePuzzleGame 側で即座にロック）
       stopTimer();
-      setIsCompletionDialogOpen(true);
+
+      // 既存タイマーをクリア
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+      }
+
+      // 1秒間完成形を見せた後にダイアログを表示
+      completionTimeoutRef.current = setTimeout(() => {
+        setIsCompletionDialogOpen(true);
+      }, 1000);
     },
   });
 
@@ -134,6 +154,9 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
   };
 
   const executeRestart = () => {
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+    }
     restartGame();
     resetTimer();
     startTimer();
@@ -142,6 +165,9 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
   };
 
   const executeReshuffle = () => {
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+    }
     reshuffleGame();
     resetTimer();
     startTimer();
