@@ -27,7 +27,7 @@ export const PuzzlePiece: React.FC<PuzzlePieceProps> = ({
   if (isBlank) {
     return (
       <div
-        className="w-full h-full rounded-xl bg-slate-900/10 border-2 border-dashed border-slate-300/40 pointer-events-none"
+        className="w-full h-full rounded-[2px] bg-slate-950/40 border border-dashed border-slate-600/40 pointer-events-none"
         aria-hidden="true"
       />
     );
@@ -72,9 +72,9 @@ export const PuzzlePiece: React.FC<PuzzlePieceProps> = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       disabled={!canMove}
-      className={`w-full h-full rounded-xl overflow-hidden relative shadow-sm border border-black/10 select-none transition-transform duration-100 ease-out active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
+      className={`w-full h-full rounded-[2px] overflow-hidden relative shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.25)] select-none transition-transform duration-100 ease-out active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
         canMove
-          ? 'cursor-pointer hover:shadow-md hover:brightness-105 active:brightness-95'
+          ? 'cursor-pointer hover:brightness-105 active:brightness-95'
           : 'cursor-default opacity-95'
       }`}
       style={{
@@ -86,14 +86,14 @@ export const PuzzlePiece: React.FC<PuzzlePieceProps> = ({
     >
       {/* ピース番号オーバーレイ */}
       {showNumber && (
-        <div className="absolute top-1 left-1 bg-black/65 backdrop-blur-[2px] text-white font-extrabold text-[11px] sm:text-xs px-1.5 py-0.5 rounded-md shadow-sm pointer-events-none">
+        <div className="absolute top-0.5 left-0.5 bg-black/70 backdrop-blur-[2px] text-white font-extrabold text-[10px] sm:text-xs px-1 py-0.2 rounded-sm shadow-sm pointer-events-none">
           {tileId + 1}
         </div>
       )}
 
       {/* 移動可能ピースの微細なハイライトインジケーター */}
       {canMove && (
-        <div className="absolute inset-0 ring-1 ring-inset ring-white/40 pointer-events-none rounded-xl" />
+        <div className="absolute inset-0 ring-1 ring-inset ring-white/50 pointer-events-none rounded-[2px]" />
       )}
     </button>
   );

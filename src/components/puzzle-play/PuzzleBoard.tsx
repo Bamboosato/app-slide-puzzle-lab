@@ -24,11 +24,11 @@ export const PuzzleBoard: React.FC<PuzzleBoardProps> = ({
   const totalTiles = gridSize * gridSize;
   const blankId = totalTiles - 1;
 
-  // グリッドギャップ（分割数に応じて調整）
-  const gapClass = gridSize >= 5 ? 'gap-1.5 p-2' : 'gap-2 p-2.5';
+  // グリッドギャップ（絵の連続性を高めるため 1px〜2px の微小な隙間に設定）
+  const gapClass = gridSize === 3 ? 'gap-[2px] p-1.5' : 'gap-[1px] p-1';
 
   return (
-    <div className="w-full max-w-md mx-auto aspect-square bg-slate-800 rounded-3xl shadow-xl overflow-hidden border-4 border-slate-700/60 touch-none">
+    <div className="w-full max-w-md mx-auto aspect-square bg-slate-900 rounded-2xl shadow-xl overflow-hidden border-[3px] border-slate-700/80 touch-none">
       <div
         className={`w-full h-full grid ${gapClass}`}
         style={{
