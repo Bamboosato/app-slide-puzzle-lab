@@ -70,4 +70,75 @@ describe('useTimer', () => {
     });
     expect(result.current.seconds).toBe(4);
   });
+
+  it('stops and resets correctly', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => {
+      result.current.start();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(result.current.seconds).toBe(5);
+
+    act(() => {
+      result.current.stop();
+    });
+    expect(result.current.isRunning).toBe(false);
+
+    // 停止後は時間が増えない
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(result.current.seconds).toBe(5);
+
+    act(() => {
+      result.current.reset();
+    });
+    expect(result.current.seconds).toBe(0);
+    expect(result.current.isRunning).toBe(false);
+    expect(result.current.isPaused).toBe(false);
+  });
+
+  it('automatically pauses on visibilityState hidden and onAutoPause callback is invoked', () => {
+    const onAutoPause = vi.fn();
+    const { result } = renderHook(() => useTimer({ onAutoPause }));
+
+    act(() => {
+      result.current.start();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(result.current.seconds).toBe(1);
+
+    // タブがバックグラウンドになった場合 (hidden)
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', writable: true, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(result.current.isPaused).toBe(true);
+    expect(onAutoPause).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    // ポーズ中なので増えない
+    expect(result.current.seconds).toBe(1);
+
+    // 再開 (resume)
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true, configurable: true });
+      result.current.resume();
+    });
+    expect(result.current.isPaused).toBe(false);
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(result.current.seconds).toBe(3);
+  });
 });

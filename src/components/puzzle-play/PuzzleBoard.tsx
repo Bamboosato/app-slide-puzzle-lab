@@ -9,6 +9,7 @@ interface PuzzleBoardProps {
   pieces: string[];
   showNumbers: boolean;
   isCompleted?: boolean;
+  isInteractionDisabled?: boolean;
   onTileClick: (position: number) => void;
   onTileSwipe: (position: number, direction: 'up' | 'down' | 'left' | 'right') => void;
 }
@@ -19,6 +20,7 @@ export const PuzzleBoard: React.FC<PuzzleBoardProps> = ({
   pieces,
   showNumbers,
   isCompleted = false,
+  isInteractionDisabled = false,
   onTileClick,
   onTileSwipe,
 }) => {
@@ -47,7 +49,8 @@ export const PuzzleBoard: React.FC<PuzzleBoardProps> = ({
       >
         {board.map((tileId, position) => {
           const isBlank = tileId === blankId;
-          const isAdjacentToBlank = !isCompleted && !isBlank && canMove(position, blankIndex, gridSize);
+          const isAdjacentToBlank =
+            !isCompleted && !isInteractionDisabled && !isBlank && canMove(position, blankIndex, gridSize);
 
           return (
             <div key={position} className="w-full h-full relative" role="gridcell">

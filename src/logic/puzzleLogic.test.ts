@@ -10,7 +10,8 @@ import {
   shuffleBoard,
   getKeyboardMoveTarget,
 } from './puzzleLogic';
-import { GridSize } from '../types/puzzle';
+import { GridSize, ShuffleLevel } from '../types/puzzle';
+import { MAX_SOLVED_TILE_RATIOS } from '../config/constants';
 
 describe('puzzleLogic', () => {
   describe('createSolvedBoard', () => {
@@ -91,23 +92,53 @@ describe('puzzleLogic', () => {
 
   describe('shuffleBoard', () => {
     const gridSizes: GridSize[] = [3, 4, 5, 6];
+    const shuffleLevels: ShuffleLevel[] = ['light', 'standard', 'hard'];
 
     gridSizes.forEach((size) => {
-      it(`shuffles ${size}x${size} board into solvable, unsolved state with <= 50% matched tiles`, () => {
-        const shuffled = shuffleBoard(size, 'standard');
-        const total = size * size;
+      shuffleLevels.forEach((level) => {
+        it(`shuffles ${size}x${size} board with "${level}" level into valid, solvable, unsolved state`, () => {
+          const shuffled = shuffleBoard(size, level);
+          const total = size * size;
 
-        expect(shuffled.length).toBe(total);
-        expect(isSolved(shuffled)).toBe(false);
+          expect(shuffled.length).toBe(total);
+          expect(isSolved(shuffled)).toBe(false);
 
-        // Every number 0..total-1 exists exactly once
-        const sorted = [...shuffled].sort((a, b) => a - b);
-        expect(sorted).toEqual(createSolvedBoard(size));
+          // Every number 0..total-1 exists exactly once
+          const sorted = [...shuffled].sort((a, b) => a - b);
+          expect(sorted).toEqual(createSolvedBoard(size));
 
-        // Solved count should be <= 50%
-        const matched = countSolvedTiles(shuffled);
-        expect(matched).toBeLessThanOrEqual(total * 0.5);
+          // Solved tile count ratio conforms to MAX_SOLVED_TILE_RATIOS
+          const matched = countSolvedTiles(shuffled);
+          expect(matched).toBeLessThanOrEqual(Math.floor(total * MAX_SOLVED_TILE_RATIOS[level]));
+        });
       });
+    });
+
+    it('falls back to the best non-solved board without returning a 1-move board when condition cannot be met', () => {
+      // Math.random をモックして、あえて条件を満たしにくいように誘導
+      const originalRandom = Math.random;
+      try {
+        // 常にインデックス 0 を選ぶようにして試行条件 (例: hard <= 35%) を満たさない状況をシミュレート
+        let counter = 0;
+        Math.random = () => {
+          counter++;
+          return 0.01; // 常に最初の候補を選択
+        };
+
+        const result = shuffleBoard(3, 'hard');
+
+        expect(result.length).toBe(9);
+        expect(isSolved(result)).toBe(false);
+        // 重複や欠落がないこと
+        const sorted = [...result].sort((a, b) => a - b);
+        expect(sorted).toEqual(createSolvedBoard(3));
+
+        // 1手完成盤面（完成状態から1手だけ動いた盤面は一致数が 9 - 2 = 7）ではないこと
+        // 少なくとも複数回合法手が実行されていること
+        expect(result).not.toEqual(createSolvedBoard(3));
+      } finally {
+        Math.random = originalRandom;
+      }
     });
   });
 

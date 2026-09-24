@@ -14,6 +14,7 @@ interface UsePuzzleGameProps {
   gridSize: GridSize;
   shuffleLevel: ShuffleLevel;
   initialShowNumbers?: boolean;
+  isInteractionDisabled?: boolean;
   onMoveSuccess?: () => void;
   onCompleted?: () => void;
 }
@@ -22,6 +23,7 @@ export function usePuzzleGame({
   gridSize,
   shuffleLevel,
   initialShowNumbers = false,
+  isInteractionDisabled = false,
   onMoveSuccess,
   onCompleted,
 }: UsePuzzleGameProps) {
@@ -38,6 +40,9 @@ export function usePuzzleGame({
   const isCompletedRef = useRef(isGameCompleted);
   isCompletedRef.current = isGameCompleted;
 
+  const isInteractionDisabledRef = useRef(isInteractionDisabled);
+  isInteractionDisabledRef.current = isInteractionDisabled;
+
   // 盤面初期化 / 再シャッフル
   const initializeNewGame = useCallback(
     (newSize: GridSize = gridSize, newLevel: ShuffleLevel = shuffleLevel) => {
@@ -53,7 +58,7 @@ export function usePuzzleGame({
   // ピース移動処理（タップ・クリック・キーボード・スワイプ共通）
   const moveByTileIndex = useCallback(
     (tileIndex: number): boolean => {
-      if (isCompletedRef.current) return false;
+      if (isCompletedRef.current || isInteractionDisabledRef.current) return false;
 
       const currentBoard = boardRef.current;
       const { newBoard, moved } = moveTile(currentBoard, tileIndex, gridSize);
@@ -99,7 +104,7 @@ export function usePuzzleGame({
   // キーボードイベントハンドラ
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (isCompletedRef.current) return;
+      if (isCompletedRef.current || isInteractionDisabledRef.current) return;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
         const currentBoard = boardRef.current;
@@ -129,7 +134,7 @@ export function usePuzzleGame({
   // 個別ピース上でのスワイプ判定ハンドラ
   const handlePieceSwipe = useCallback(
     (tileIndex: number, direction: 'up' | 'down' | 'left' | 'right') => {
-      if (isCompletedRef.current) return;
+      if (isCompletedRef.current || isInteractionDisabledRef.current) return;
       const currentBoard = boardRef.current;
       const blankIndex = getBlankIndex(currentBoard, gridSize);
 

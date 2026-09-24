@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Trophy, RotateCcw, Footprints, Clock, X } from 'lucide-react';
@@ -20,6 +20,8 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
   onRetry,
   onClose,
 }) => {
+  const titleId = useId();
+
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
@@ -27,14 +29,23 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} showCloseButton={true} maxWidth="max-w-sm">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      showCloseButton={true}
+      maxWidth="max-w-sm"
+      ariaLabelledBy={`completion-title-${titleId}`}
+      ariaLabel="完成おめでとう！"
+    >
       <div className="flex flex-col items-center text-center">
         {/* トロフィーアイコン */}
         <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center mb-3 animate-bounce">
           <Trophy className="w-9 h-9" />
         </div>
 
-        <h2 className="text-2xl font-black text-slate-900 mb-1">完成おめでとう！</h2>
+        <h2 id={`completion-title-${titleId}`} className="text-2xl font-black text-slate-900 mb-1">
+          完成おめでとう！
+        </h2>
         <p className="text-xs text-slate-500 mb-4">見事にパズルを完成させました！</p>
 
         {/* 完成した完全な1枚画像 */}

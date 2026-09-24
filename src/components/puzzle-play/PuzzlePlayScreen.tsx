@@ -58,6 +58,13 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     },
   });
 
+  // 操作禁止状態の一元算出（ポーズ・元画像・確認ダイアログ・完成ダイアログ）
+  const isInteractionDisabled =
+    isManualPaused ||
+    showOriginalModal ||
+    confirmAction !== null ||
+    isCompletionDialogOpen;
+
   // パズルゲームフック
   const {
     board,
@@ -73,6 +80,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     gridSize: settings.gridSize,
     shuffleLevel: settings.shuffleLevel,
     initialShowNumbers: settings.showNumbers,
+    isInteractionDisabled,
     onMoveSuccess: () => {
       if (!isTimerRunning) {
         startTimer();
@@ -212,6 +220,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
           pieces={pieces}
           showNumbers={showNumbers}
           isCompleted={isCompleted}
+          isInteractionDisabled={isInteractionDisabled}
           onTileClick={moveByTileIndex}
           onTileSwipe={handlePieceSwipe}
         />

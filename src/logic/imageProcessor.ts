@@ -157,6 +157,37 @@ export function cropImageToSquare(
   return outputCanvas;
 }
 
+export interface TileBounds {
+  sx: number;
+  sy: number;
+  sWidth: number;
+  sHeight: number;
+}
+
+/**
+ * 元画像サイズとグリッドサイズから、指定マス (col, row) の切り出し矩形領域を計算する。
+ * 端数による欠落・隙間・重複を防ぐため、比率ベースで境界座標を算出する。
+ */
+export function getTileBounds(
+  col: number,
+  row: number,
+  width: number,
+  height: number,
+  gridSize: GridSize
+): TileBounds {
+  const x1 = Math.round((col * width) / gridSize);
+  const x2 = Math.round(((col + 1) * width) / gridSize);
+  const y1 = Math.round((row * height) / gridSize);
+  const y2 = Math.round(((row + 1) * height) / gridSize);
+
+  return {
+    sx: x1,
+    sy: y1,
+    sWidth: x2 - x1,
+    sHeight: y2 - y1,
+  };
+}
+
 /**
  * 正方形画像を各ピースに分割し、データURL配列を生成する。
  * 配列長は gridSize^2。最後の要素は右下端ピース（完成時用）。
@@ -165,21 +196,20 @@ export function sliceImageToPieces(
   squareCanvas: HTMLCanvasElement,
   gridSize: GridSize
 ): string[] {
-  const tileSize = Math.floor(squareCanvas.width / gridSize);
+  const width = squareCanvas.width;
+  const height = squareCanvas.height;
   const pieces: string[] = [];
 
   for (let row = 0; row < gridSize; row++) {
     for (let col = 0; col < gridSize; col++) {
+      const { sx, sy, sWidth, sHeight } = getTileBounds(col, row, width, height, gridSize);
       const pieceCanvas = document.createElement('canvas');
-      pieceCanvas.width = tileSize;
-      pieceCanvas.height = tileSize;
+      pieceCanvas.width = sWidth;
+      pieceCanvas.height = sHeight;
       const ctx = pieceCanvas.getContext('2d');
       if (!ctx) continue;
 
-      const sx = col * tileSize;
-      const sy = row * tileSize;
-
-      ctx.drawImage(squareCanvas, sx, sy, tileSize, tileSize, 0, 0, tileSize, tileSize);
+      ctx.drawImage(squareCanvas, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
       pieces.push(pieceCanvas.toDataURL('image/jpeg', 0.9));
     }
   }

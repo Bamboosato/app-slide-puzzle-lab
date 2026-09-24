@@ -9,6 +9,12 @@ export const SHUFFLE_MULTIPLIERS: Record<ShuffleLevel, number> = {
   hard: 30,
 };
 
+export const MAX_SOLVED_TILE_RATIOS: Record<ShuffleLevel, number> = {
+  light: 0.8,
+  standard: 0.5,
+  hard: 0.35,
+};
+
 export const SWIPE_THRESHOLD_PX = 25;
 export const TILE_ANIMATION_DURATION_MS = 100;
 

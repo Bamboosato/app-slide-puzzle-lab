@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { AlertCircle } from 'lucide-react';
@@ -24,8 +24,17 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const titleId = useId();
+
   return (
-    <Modal isOpen={isOpen} onClose={onCancel} showCloseButton={false} maxWidth="max-w-sm">
+    <Modal
+      isOpen={isOpen}
+      onClose={onCancel}
+      showCloseButton={false}
+      maxWidth="max-w-sm"
+      ariaLabelledBy={`confirm-title-${titleId}`}
+      ariaLabel={title}
+    >
       <div className="flex flex-col items-center text-center">
         <div
           className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
@@ -34,7 +43,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         >
           <AlertCircle className="w-6 h-6" />
         </div>
-        <h3 className="text-lg font-bold text-slate-900 mb-2">{title}</h3>
+        <h3 id={`confirm-title-${titleId}`} className="text-lg font-bold text-slate-900 mb-2">
+          {title}
+        </h3>
         <p className="text-sm text-slate-600 mb-6">{message}</p>
         <div className="flex gap-3 w-full">
           <Button variant="secondary" className="flex-1" onClick={onCancel}>

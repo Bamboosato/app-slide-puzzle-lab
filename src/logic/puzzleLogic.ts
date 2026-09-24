@@ -1,5 +1,5 @@
 import { GridSize, ShuffleLevel } from '../types/puzzle';
-import { SHUFFLE_MULTIPLIERS } from '../config/constants';
+import { SHUFFLE_MULTIPLIERS, MAX_SOLVED_TILE_RATIOS } from '../config/constants';
 
 /**
  * 0 から (gridSize^2 - 1) までの完成盤面配列を生成する。
@@ -110,13 +110,18 @@ export function countSolvedTiles(board: number[]): number {
 /**
  * 合法手シミュレーションにより、必ず解ける盤面を生成する。
  * - 直前手の逆移動除外
- * - 崩れ度合い検証（完成状態の除外 + 正解位置残存率50%以下）
+ * - レベル別の崩れ度合い検証（MAX_SOLVED_TILE_RATIOS による正解マス残存率判定）
+ * - フォールバック時は1手盤面ではなく試行中の最良非完成盤面を返却
  */
 export function shuffleBoard(gridSize: GridSize, level: ShuffleLevel): number[] {
   const totalTiles = gridSize * gridSize;
   const multiplier = SHUFFLE_MULTIPLIERS[level];
+  const maxSolvedRatio = MAX_SOLVED_TILE_RATIOS[level];
   const steps = totalTiles * multiplier;
   const maxAttempts = 20;
+
+  let bestBoard: number[] | null = null;
+  let bestSolvedCount = Infinity;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     let board = createSolvedBoard(gridSize);
@@ -147,27 +152,49 @@ export function shuffleBoard(gridSize: GridSize, level: ShuffleLevel): number[] 
       blankIndex = chosenTileIndex;
     }
 
-    // 崩れ度合いの検証
-    // 1. 完成状態でないこと
+    // 完成状態のものは除外
     if (isSolved(board)) {
       continue;
     }
 
-    // 2. 正解位置にとどまっているピース数が全体の過半数（50%）以下であること
     const solvedCount = countSolvedTiles(board);
-    if (solvedCount <= totalTiles * 0.5) {
+
+    // 条件を満たしていれば即座に返却
+    if (solvedCount <= totalTiles * maxSolvedRatio) {
       return board;
+    }
+
+    // 条件未達の場合でも、目標に最も近い非完成盤面を保持
+    if (solvedCount < bestSolvedCount) {
+      bestSolvedCount = solvedCount;
+      bestBoard = [...board];
     }
   }
 
-  // 万一規定回数内に50%以下を引けなかった場合でも、完成状態以外の直近盤面を返す
-  let fallbackBoard = createSolvedBoard(gridSize);
-  let blankIndex = totalTiles - 1;
-  const moves = getValidMoves(blankIndex, gridSize);
-  const chosen = moves[0];
-  fallbackBoard[blankIndex] = fallbackBoard[chosen];
-  fallbackBoard[chosen] = totalTiles - 1;
-  return fallbackBoard;
+  // 万一すべての試行で条件未達だった場合、完成状態ではない最良盤面を返す
+  if (bestBoard !== null) {
+    return bestBoard;
+  }
+
+  // 全試行が完成状態だった極端なエッジケース用の安全フォールバック
+  let safeBoard = createSolvedBoard(gridSize);
+  let bIdx = totalTiles - 1;
+  let pIdx = -1;
+  const fallbackSteps = Math.max(5, gridSize * 2);
+  for (let s = 0; s < fallbackSteps; s++) {
+    const validMoves = getValidMoves(bIdx, gridSize);
+    let candidates = validMoves;
+    if (pIdx !== -1 && validMoves.length > 1) {
+      const filtered = validMoves.filter((idx) => idx !== pIdx);
+      if (filtered.length > 0) candidates = filtered;
+    }
+    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    safeBoard[bIdx] = safeBoard[chosen];
+    safeBoard[chosen] = totalTiles - 1;
+    pIdx = bIdx;
+    bIdx = chosen;
+  }
+  return safeBoard;
 }
 
 /**
