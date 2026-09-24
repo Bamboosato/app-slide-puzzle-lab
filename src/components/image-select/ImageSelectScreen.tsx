@@ -90,15 +90,15 @@ export const ImageSelectScreen: React.FC<ImageSelectScreenProps> = ({ onImageSel
         </p>
       </div>
 
-      {/* ドロップゾーン / ファイル選択エリア */}
+      {/* ドロップゾーン / ファイル選択エリア（パズル盤面と同じ正方形＆角丸に統一） */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`w-full aspect-square max-w-sm rounded-3xl border-3 border-dashed transition-all duration-200 cursor-pointer flex flex-col items-center justify-center p-6 text-center ${
+        className={`w-full aspect-square max-w-[320px] sm:max-w-[340px] flex-none rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer flex flex-col items-center justify-center p-6 text-center select-none ${
           isDragging
-            ? 'border-blue-500 bg-blue-50/60 scale-[1.02]'
+            ? 'border-blue-500 bg-blue-50/70 scale-[1.02] shadow-md'
             : 'border-slate-300 hover:border-blue-400 bg-white shadow-sm hover:shadow-md'
         }`}
         role="button"
@@ -144,7 +144,7 @@ export const ImageSelectScreen: React.FC<ImageSelectScreenProps> = ({ onImageSel
       </div>
 
       {/* サンプル画像で試す */}
-      <div className="mt-5 flex flex-col items-center gap-2 w-full max-w-sm">
+      <div className="mt-5 flex flex-col items-center gap-2 w-full max-w-[320px] sm:max-w-[340px]">
         <div className="flex items-center gap-2 w-full">
           <div className="flex-1 h-px bg-slate-200"></div>
           <span className="text-xs text-slate-400 font-medium">または</span>
