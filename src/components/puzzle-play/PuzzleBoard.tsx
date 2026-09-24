@@ -46,8 +46,7 @@ export const PuzzleBoard: React.FC<PuzzleBoardProps> = ({
         aria-label="スライドパズル盤面"
       >
         {board.map((tileId, position) => {
-          // 完成時は空白マスにも画像を描画して1枚絵にする
-          const isBlank = tileId === blankId && !isCompleted;
+          const isBlank = tileId === blankId;
           const isAdjacentToBlank = !isCompleted && !isBlank && canMove(position, blankIndex, gridSize);
 
           return (

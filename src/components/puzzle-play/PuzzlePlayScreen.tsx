@@ -8,14 +8,13 @@ import { PauseOverlay } from './PauseOverlay';
 import { OriginalImageModal } from './OriginalImageModal';
 import { CompletionDialog } from './CompletionDialog';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { Eye, RotateCcw, Shuffle, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings, Trophy } from 'lucide-react';
+import { Eye, RotateCcw, Shuffle, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings } from 'lucide-react';
 
 interface PuzzlePlayScreenProps {
   pieces: string[];
   fullCroppedCanvas: HTMLCanvasElement;
   settings: GameSettings;
   onBackToConfig?: () => void;
-  onNewImageSelected: () => void;
 }
 
 export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
@@ -23,7 +22,6 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
   fullCroppedCanvas,
   settings,
   onBackToConfig,
-  onNewImageSelected,
 }) => {
   const [showOriginalModal, setShowOriginalModal] = useState(false);
   const [isManualPaused, setIsManualPaused] = useState(false);
@@ -193,19 +191,6 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         />
       </div>
 
-      {/* 完成時にダイアログを閉じた場合の「結果を再表示」バナー */}
-      {isCompleted && !isCompletionDialogOpen && (
-        <div className="w-full max-w-md mb-4 flex justify-center">
-          <button
-            onClick={() => setIsCompletionDialogOpen(true)}
-            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 animate-bounce"
-          >
-            <Trophy className="w-4 h-4" />
-            <span>完成結果を見る</span>
-          </button>
-        </div>
-      )}
-
       {/* 操作バー */}
       <div className="grid grid-cols-4 gap-2 w-full max-w-md mb-6">
         <button
@@ -278,7 +263,6 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         seconds={seconds}
         completedImageDataUrl={fullImageDataUrlRef.current}
         onRetry={executeReshuffle}
-        onNewImage={onNewImageSelected}
         onClose={() => setIsCompletionDialogOpen(false)}
       />
 

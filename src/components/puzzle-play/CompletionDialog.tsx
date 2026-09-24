@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { Trophy, RotateCcw, Image as ImageIcon, Footprints, Clock, X } from 'lucide-react';
+import { Trophy, RotateCcw, Footprints, Clock, X } from 'lucide-react';
 
 interface CompletionDialogProps {
   isOpen: boolean;
@@ -9,7 +9,6 @@ interface CompletionDialogProps {
   seconds: number;
   completedImageDataUrl?: string;
   onRetry: () => void;
-  onNewImage: () => void;
   onClose: () => void;
 }
 
@@ -19,7 +18,6 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
   seconds,
   completedImageDataUrl,
   onRetry,
-  onNewImage,
   onClose,
 }) => {
   const formatTime = (totalSeconds: number) => {
@@ -83,23 +81,13 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
           </Button>
 
           <Button
-            variant="secondary"
-            size="md"
-            className="w-full"
-            icon={<ImageIcon className="w-4 h-4 text-slate-600" />}
-            onClick={onNewImage}
-          >
-            新しい画像を選ぶ
-          </Button>
-
-          <Button
             variant="ghost"
             size="sm"
             className="w-full text-slate-500 hover:text-slate-800"
             icon={<X className="w-3.5 h-3.5" />}
             onClick={onClose}
           >
-            閉じる（完成画面を見る）
+            閉じる（パズル画面に戻る）
           </Button>
         </div>
       </div>

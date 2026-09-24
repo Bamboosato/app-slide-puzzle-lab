@@ -64,7 +64,6 @@ export function App() {
             fullCroppedCanvas={fullCroppedCanvas}
             settings={gameSettings}
             onBackToConfig={handleBackToConfig}
-            onNewImageSelected={handleBackToSelect}
           />
         )}
       </main>
