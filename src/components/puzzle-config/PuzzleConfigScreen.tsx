@@ -54,7 +54,7 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
     };
   }, [sourceImage, zoom, pan]);
 
-  // プレビュー描画
+  // プレビュー描画（パズル盤面と同一の角丸・隙間・質感・空白マス・番号表示を再現）
   const drawPreview = useCallback(() => {
     const canvas = previewCanvasRef.current;
     if (!canvas) return;
@@ -67,43 +67,148 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
     const sWidth = crop.width * sourceImage.width;
     const sHeight = crop.height * sourceImage.height;
 
-    canvas.width = 400;
-    canvas.height = 400;
+    // Retina・高解像度表示対応 (640x640)
+    const size = 640;
+    canvas.width = size;
+    canvas.height = size;
 
-    // 画像描画
-    ctx.drawImage(sourceImage.canvas, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+    // 1. パズル盤面背景色 (パズル画面の bg-slate-800/95: #1e293b)
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, size, size);
 
-    // グリッド線のオーバーレイ描画
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.lineWidth = 1.5;
-    const step = canvas.width / gridSize;
+    // 2. パディングとピース間ギャップの計算（パズル画面の実寸比率を忠実にスケール）
+    const padding = gridSize === 3 ? 16 : 12; // 320px換算で 8px / 6px
+    const gap = gridSize === 3 ? 8 : gridSize <= 5 ? 6 : 4; // 320px換算で 4px / 3px / 2px
+    const boardInner = size - padding * 2;
+    const tileSize = (boardInner - gap * (gridSize - 1)) / gridSize;
+    const cornerRadius = 6; // 320px換算で 3px (rounded-[3px])
 
-    for (let i = 1; i < gridSize; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * step, 0);
-      ctx.lineTo(i * step, canvas.height);
-      ctx.stroke();
+    // 角丸パス描画用ヘルパー
+    const addRoundRect = (
+      c: CanvasRenderingContext2D,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      r: number
+    ) => {
+      if (typeof c.roundRect === 'function') {
+        c.roundRect(x, y, w, h, r);
+      } else {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.lineTo(x + w - r, y);
+        c.quadraticCurveTo(x + w, y, x + w, y + r);
+        c.lineTo(x + w, y + h - r);
+        c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        c.lineTo(x + r, y + h);
+        c.quadraticCurveTo(x, y + h, x, y + h - r);
+        c.lineTo(x, y + r);
+        c.quadraticCurveTo(x, y, x + r, y);
+        c.closePath();
+      }
+    };
 
-      ctx.beginPath();
-      ctx.moveTo(0, i * step);
-      ctx.lineTo(canvas.width, i * step);
-      ctx.stroke();
+    // 3. 各ピースを描画
+    for (let row = 0; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
+        const dx = padding + col * (tileSize + gap);
+        const dy = padding + row * (tileSize + gap);
+        const tileIndex = row * gridSize + col;
+        const isBlank = row === gridSize - 1 && col === gridSize - 1;
+
+        if (isBlank) {
+          // 右下の空白ピース（パズル画面の bg-slate-900/60 + border-dashed border-slate-600/40 を忠実に再現）
+          ctx.save();
+          ctx.beginPath();
+          addRoundRect(ctx, dx, dy, tileSize, tileSize, cornerRadius);
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+          ctx.fill();
+
+          ctx.setLineDash([8, 6]);
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // 視認性の良い「空白」ラベル
+          ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
+          ctx.font = 'bold 18px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('空白', dx + tileSize / 2, dy + tileSize / 2);
+          ctx.restore();
+          continue;
+        }
+
+        // 通常ピースの元画像対応領域
+        const srcTileW = sWidth / gridSize;
+        const srcTileH = sHeight / gridSize;
+        const srcTileX = sx + col * srcTileW;
+        const srcTileY = sy + row * srcTileH;
+
+        ctx.save();
+        ctx.beginPath();
+        addRoundRect(ctx, dx, dy, tileSize, tileSize, cornerRadius);
+        ctx.clip();
+
+        // ピース画像を描画
+        ctx.drawImage(
+          sourceImage.canvas,
+          srcTileX,
+          srcTileY,
+          srcTileW,
+          srcTileH,
+          dx,
+          dy,
+          tileSize,
+          tileSize
+        );
+
+        // ピース上部の微細な立体ハイライトライン (inset_0_1px_0_rgba(255,255,255,0.35))
+        ctx.beginPath();
+        ctx.moveTo(dx + cornerRadius, dy + 1.5);
+        ctx.lineTo(dx + tileSize - cornerRadius, dy + 1.5);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // ピース外周の境界シャドウ (inset_0_0_0_1px_rgba(0,0,0,0.15))
+        ctx.beginPath();
+        addRoundRect(ctx, dx, dy, tileSize, tileSize, cornerRadius);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+
+        // ピース番号表示（showNumbers がオンの場合）
+        if (showNumbers) {
+          ctx.save();
+          const numText = (tileIndex + 1).toString();
+          ctx.font = 'bold 17px sans-serif';
+          const textMetrics = ctx.measureText(numText);
+          const badgeW = Math.max(26, textMetrics.width + 12);
+          const badgeH = 24;
+          const bx = dx + 6;
+          const by = dy + 6;
+
+          // 番号バッジの黒半透明背景
+          ctx.beginPath();
+          addRoundRect(ctx, bx, by, badgeW, badgeH, 4);
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+          ctx.fill();
+
+          // 番号テキスト
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(numText, bx + badgeW / 2, by + badgeH / 2 + 1);
+
+          ctx.restore();
+        }
+      }
     }
-
-    // 右下端マス（空白マス）のプレースホルダー表示
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
-    ctx.fillRect((gridSize - 1) * step, (gridSize - 1) * step, step, step);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(
-      '空白マス',
-      (gridSize - 1) * step + step / 2,
-      (gridSize - 1) * step + step / 2
-    );
-  }, [sourceImage, calculateCropArea, gridSize]);
+  }, [sourceImage, calculateCropArea, gridSize, showNumbers]);
 
   useEffect(() => {
     drawPreview();
@@ -165,7 +270,7 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
       <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 mb-6 flex flex-col items-center">
         <div
           ref={containerRef}
-          className="w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden shadow-inner bg-slate-900 relative cursor-grab active:cursor-grabbing touch-none"
+          className="w-full max-w-[320px] aspect-square rounded-2xl shadow-xl overflow-hidden bg-slate-800/95 border-2 border-slate-700/80 relative cursor-grab active:cursor-grabbing touch-none select-none"
           onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
           onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
           onMouseUp={handlePointerUp}
