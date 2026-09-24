@@ -37,6 +37,11 @@ export function App() {
     setScreen('select');
   };
 
+  // パズル設定に戻る
+  const handleBackToConfig = () => {
+    setScreen('config');
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between">
       <main className="flex-1 flex flex-col justify-center">
@@ -58,6 +63,7 @@ export function App() {
             pieces={puzzlePieces}
             fullCroppedCanvas={fullCroppedCanvas}
             settings={gameSettings}
+            onBackToConfig={handleBackToConfig}
             onNewImageSelected={handleBackToSelect}
           />
         )}

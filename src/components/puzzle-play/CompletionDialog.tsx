@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { Trophy, RotateCcw, Image as ImageIcon, Footprints, Clock } from 'lucide-react';
+import { Trophy, RotateCcw, Image as ImageIcon, Footprints, Clock, Settings } from 'lucide-react';
 
 interface CompletionDialogProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface CompletionDialogProps {
   seconds: number;
   completedImageDataUrl?: string;
   onRetry: () => void;
+  onBackToConfig?: () => void;
   onNewImage: () => void;
 }
 
@@ -18,6 +19,7 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
   seconds,
   completedImageDataUrl,
   onRetry,
+  onBackToConfig,
   onNewImage,
 }) => {
   const formatTime = (totalSeconds: number) => {
@@ -69,7 +71,7 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
         </div>
 
         {/* アクションボタン */}
-        <div className="flex flex-col gap-2.5 w-full">
+        <div className="flex flex-col gap-2 w-full">
           <Button
             variant="primary"
             size="lg"
@@ -79,11 +81,24 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
           >
             同じ設定で再挑戦
           </Button>
+
+          {onBackToConfig && (
+            <Button
+              variant="secondary"
+              size="md"
+              className="w-full"
+              icon={<Settings className="w-4 h-4 text-slate-600" />}
+              onClick={onBackToConfig}
+            >
+              設定を変更する（分割数など）
+            </Button>
+          )}
+
           <Button
-            variant="outline"
-            size="md"
-            className="w-full"
-            icon={<ImageIcon className="w-4 h-4" />}
+            variant="ghost"
+            size="sm"
+            className="w-full text-slate-500 hover:text-slate-800"
+            icon={<ImageIcon className="w-3.5 h-3.5" />}
             onClick={onNewImage}
           >
             新しい画像を選ぶ
