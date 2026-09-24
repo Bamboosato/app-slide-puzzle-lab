@@ -1,13 +1,14 @@
 import React, { useId } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { Trophy, RotateCcw, Footprints, Clock, X } from 'lucide-react';
+import { Trophy, RotateCcw, Footprints, Clock, X, Route } from 'lucide-react';
 
 interface CompletionDialogProps {
   isOpen: boolean;
   moves: number;
   seconds: number;
   completedImageDataUrl?: string;
+  shortestMovesText?: string;
   onRetry: () => void;
   onClose: () => void;
 }
@@ -17,6 +18,7 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
   moves,
   seconds,
   completedImageDataUrl,
+  shortestMovesText,
   onRetry,
   onClose,
 }) => {
@@ -60,23 +62,33 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
         </div>
 
         {/* 成績カード */}
-        <div className="grid grid-cols-2 gap-3 w-full bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 mb-6">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase">
-              <Footprints className="w-3.5 h-3.5" />
-              <span>総手数</span>
+        <div className="flex flex-col w-full bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 mb-6 gap-2.5">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase">
+                <Footprints className="w-3.5 h-3.5" />
+                <span>総手数</span>
+              </div>
+              <div className="text-xl font-black text-slate-800">{moves} 手</div>
             </div>
-            <div className="text-xl font-black text-slate-800">{moves} 手</div>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase">
+                <Clock className="w-3.5 h-3.5" />
+                <span>クリア時間</span>
+              </div>
+              <div className="text-xl font-black text-slate-800 font-mono">
+                {formatTime(seconds)}
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase">
-              <Clock className="w-3.5 h-3.5" />
-              <span>クリア時間</span>
+
+          {/* 最短手数（初期盤面） */}
+          {shortestMovesText && (
+            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700">
+              <Route className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span data-testid="completion-shortest-moves">{shortestMovesText}</span>
             </div>
-            <div className="text-xl font-black text-slate-800 font-mono">
-              {formatTime(seconds)}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* アクションボタン */}

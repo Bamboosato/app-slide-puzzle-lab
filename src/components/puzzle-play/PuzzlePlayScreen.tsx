@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameSettings } from '../../types/puzzle';
 import { usePuzzleGame } from '../../hooks/usePuzzleGame';
 import { useTimer } from '../../hooks/useTimer';
+import { useShortestMoves } from '../../hooks/useShortestMoves';
 import { PuzzleHeader } from './PuzzleHeader';
 import { PuzzleBoard } from './PuzzleBoard';
 import { PauseOverlay } from './PauseOverlay';
@@ -68,6 +69,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
   // パズルゲームフック
   const {
     board,
+    initialBoard,
     moves,
     isCompleted,
     showNumbers,
@@ -100,6 +102,12 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         setIsCompletionDialogOpen(true);
       }, 1000);
     },
+  });
+
+  // 最短手数計算フック（初期配置スナップショット基準・Web Worker非同期探索）
+  const shortestMoves = useShortestMoves({
+    initialBoard,
+    gridSize: settings.gridSize,
   });
 
   // 盤面表示完了後にタイマー開始
@@ -202,7 +210,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
 
   return (
     <div className="max-w-xl mx-auto px-4 py-4 sm:py-6 flex flex-col items-center">
-      {/* ヘッダー情報（手数、タイマー、ポーズ、番号トグル） */}
+      {/* ヘッダー情報（手数、タイマー、ポーズ、番号トグル、最短手数） */}
       <PuzzleHeader
         moves={moves}
         seconds={seconds}
@@ -210,6 +218,8 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         onToggleNumbers={toggleShowNumbers}
         onPause={handlePause}
         isPaused={isManualPaused || showOriginalModal || isCompleted}
+        shortestMovesText={shortestMoves.displayText}
+        isCalculatingShortestMoves={shortestMoves.status === 'calculating'}
       />
 
       {/* パズル盤面 */}
@@ -297,6 +307,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         moves={moves}
         seconds={seconds}
         completedImageDataUrl={fullImageDataUrlRef.current}
+        shortestMovesText={shortestMoves.displayText}
         onRetry={executeReshuffle}
         onClose={() => setIsCompletionDialogOpen(false)}
       />

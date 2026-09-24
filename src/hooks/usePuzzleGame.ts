@@ -166,6 +166,7 @@ export function usePuzzleGame({
 
   return {
     board,
+    initialBoard,
     moves,
     isCompleted: isGameCompleted,
     showNumbers,
