@@ -9,94 +9,104 @@ export function useTimer({ onAutoPause }: UseTimerProps = {}) {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  // 累積秒数とタイマー開始時刻（ミリ秒）
+  // 累積ミリ秒と現在の区間の開始時刻
   const accumulatedMsRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
-  const intervalIdRef = useRef<number | null>(null);
 
-  const clearTimerInterval = useCallback(() => {
-    if (intervalIdRef.current !== null) {
-      window.clearInterval(intervalIdRef.current);
-      intervalIdRef.current = null;
+  // コールバックの最新参照
+  const onAutoPauseRef = useRef(onAutoPause);
+  onAutoPauseRef.current = onAutoPause;
+
+  // タイマーのインターバル管理エフェクト
+  useEffect(() => {
+    if (!isRunning || isPaused) {
+      return;
     }
-  }, []);
 
-  const updateSeconds = useCallback(() => {
-    if (startTimeRef.current !== null) {
-      const currentMs = accumulatedMsRef.current + (Date.now() - startTimeRef.current);
-      setSeconds(Math.floor(currentMs / 1000));
+    if (startTimeRef.current === null) {
+      startTimeRef.current = Date.now();
     }
-  }, []);
 
-  const start = useCallback(() => {
-    clearTimerInterval();
-    accumulatedMsRef.current = 0;
-    startTimeRef.current = Date.now();
-    setSeconds(0);
-    setIsRunning(true);
-    setIsPaused(false);
+    const intervalId = window.setInterval(() => {
+      if (startTimeRef.current !== null) {
+        const currentMs = accumulatedMsRef.current + (Date.now() - startTimeRef.current);
+        setSeconds(Math.floor(currentMs / 1000));
+      }
+    }, 200);
 
-    intervalIdRef.current = window.setInterval(updateSeconds, 200);
-  }, [clearTimerInterval, updateSeconds]);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isRunning, isPaused]);
 
-  const pause = useCallback(() => {
-    if (!isRunning || isPaused) return;
-
-    if (startTimeRef.current !== null) {
-      accumulatedMsRef.current += Date.now() - startTimeRef.current;
-      startTimeRef.current = null;
-    }
-    clearTimerInterval();
-    setIsPaused(true);
-    setSeconds(Math.floor(accumulatedMsRef.current / 1000));
-  }, [isRunning, isPaused, clearTimerInterval]);
-
-  const resume = useCallback(() => {
-    if (!isRunning || !isPaused) return;
-
-    clearTimerInterval();
-    startTimeRef.current = Date.now();
-    setIsPaused(false);
-    intervalIdRef.current = window.setInterval(updateSeconds, 200);
-  }, [isRunning, isPaused, clearTimerInterval, updateSeconds]);
-
-  const stop = useCallback(() => {
-    if (startTimeRef.current !== null) {
-      accumulatedMsRef.current += Date.now() - startTimeRef.current;
-      startTimeRef.current = null;
-    }
-    clearTimerInterval();
-    setIsRunning(false);
-    setIsPaused(false);
-    setSeconds(Math.floor(accumulatedMsRef.current / 1000));
-  }, [clearTimerInterval]);
-
-  const reset = useCallback(() => {
-    clearTimerInterval();
-    accumulatedMsRef.current = 0;
-    startTimeRef.current = null;
-    setSeconds(0);
-    setIsRunning(false);
-    setIsPaused(false);
-  }, [clearTimerInterval]);
-
-  // ブラウザタブのバックグラウンド移行時の自動ポーズ処理
+  // バックグラウンド移行時の自動ポーズ処理
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        if (isRunning && !isPaused) {
-          pause();
-          onAutoPause?.();
-        }
+        setIsRunning((prevRunning) => {
+          if (!prevRunning) return false;
+          setIsPaused((prevPaused) => {
+            if (!prevPaused) {
+              if (startTimeRef.current !== null) {
+                accumulatedMsRef.current += Date.now() - startTimeRef.current;
+                startTimeRef.current = null;
+                setSeconds(Math.floor(accumulatedMsRef.current / 1000));
+              }
+              onAutoPauseRef.current?.();
+              return true;
+            }
+            return prevPaused;
+          });
+          return true;
+        });
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearTimerInterval();
     };
-  }, [isRunning, isPaused, pause, onAutoPause, clearTimerInterval]);
+  }, []);
+
+  const start = useCallback(() => {
+    accumulatedMsRef.current = 0;
+    startTimeRef.current = Date.now();
+    setSeconds(0);
+    setIsPaused(false);
+    setIsRunning(true);
+  }, []);
+
+  const pause = useCallback(() => {
+    if (startTimeRef.current !== null) {
+      accumulatedMsRef.current += Date.now() - startTimeRef.current;
+      startTimeRef.current = null;
+    }
+    setSeconds(Math.floor(accumulatedMsRef.current / 1000));
+    setIsPaused(true);
+  }, []);
+
+  const resume = useCallback(() => {
+    startTimeRef.current = Date.now();
+    setIsPaused(false);
+  }, []);
+
+  const stop = useCallback(() => {
+    if (startTimeRef.current !== null) {
+      accumulatedMsRef.current += Date.now() - startTimeRef.current;
+      startTimeRef.current = null;
+    }
+    setSeconds(Math.floor(accumulatedMsRef.current / 1000));
+    setIsRunning(false);
+    setIsPaused(false);
+  }, []);
+
+  const reset = useCallback(() => {
+    accumulatedMsRef.current = 0;
+    startTimeRef.current = null;
+    setSeconds(0);
+    setIsRunning(false);
+    setIsPaused(false);
+  }, []);
 
   return {
     seconds,
