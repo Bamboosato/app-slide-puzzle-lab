@@ -84,8 +84,9 @@ export const ImageSelectScreen: React.FC<ImageSelectScreenProps> = ({ onImageSel
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
           Slide Puzzle Lab
         </h1>
-        <p className="text-sm text-slate-600 max-w-sm mx-auto">
-          お気に入りの写真やイラストで、自分だけのオリジナルスライドパズルを楽しもう！
+        <p className="text-sm text-slate-600 max-w-lg mx-auto">
+          <span className="inline-block">お気に入りの写真やイラストで、</span>
+          <span className="inline-block">自分だけのオリジナルスライドパズルを楽しもう！</span>
         </p>
       </div>
 
