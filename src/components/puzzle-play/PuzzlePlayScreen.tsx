@@ -1,34 +1,48 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameSettings } from '../../types/puzzle';
+import { PuzzleRecord } from '../../types/record';
 import { usePuzzleGame } from '../../hooks/usePuzzleGame';
 import { useTimer } from '../../hooks/useTimer';
 import { useShortestMoves } from '../../hooks/useShortestMoves';
+import { saveRecord, calculateRating } from '../../logic/recordStorage';
 import { PuzzleHeader } from './PuzzleHeader';
 import { PuzzleBoard } from './PuzzleBoard';
 import { PauseOverlay } from './PauseOverlay';
 import { OriginalImageModal } from './OriginalImageModal';
 import { CompletionDialog } from './CompletionDialog';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { Eye, RotateCcw, Shuffle, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings } from 'lucide-react';
+import { Tooltip } from '../common/Tooltip';
+import { Eye, RotateCcw, Shuffle, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home } from 'lucide-react';
 
 interface PuzzlePlayScreenProps {
   pieces: string[];
   fullCroppedCanvas: HTMLCanvasElement;
   settings: GameSettings;
+  replayInitialBoard?: number[];   // リプレイ用初期配置
   onBackToConfig?: () => void;
+  onViewRecords?: () => void;
 }
 
 export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
   pieces,
   fullCroppedCanvas,
   settings,
+  replayInitialBoard,
   onBackToConfig,
+  onViewRecords,
 }) => {
   const [showOriginalModal, setShowOriginalModal] = useState(false);
   const [isManualPaused, setIsManualPaused] = useState(false);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'restart' | 'reshuffle' | 'config' | null>(null);
   const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasSavedRecordRef = useRef<boolean>(false);
+  const finalTimeRef = useRef<number | null>(null);
+
+  // 記録保存結果
+  const [completionRating, setCompletionRating] = useState(0);
+  const [completionRank, setCompletionRank] = useState<number | null>(null);
+  const [completionIsNewRecord, setCompletionIsNewRecord] = useState(false);
 
   const fullImageDataUrlRef = useRef<string>('');
   if (!fullImageDataUrlRef.current) {
@@ -83,14 +97,16 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     shuffleLevel: settings.shuffleLevel,
     initialShowNumbers: settings.showNumbers,
     isInteractionDisabled,
+    replayInitialBoard,
     onMoveSuccess: () => {
       if (!isTimerRunning) {
         startTimer();
       }
     },
     onCompleted: () => {
-      // タイマー即時停止（ピース移動は usePuzzleGame 側で即座にロック）
+      // タイマー即時停止し、クリア時間を確定保持
       stopTimer();
+      finalTimeRef.current = seconds;
 
       // 既存タイマーをクリア
       if (completionTimeoutRef.current) {
@@ -109,6 +125,35 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     initialBoard,
     gridSize: settings.gridSize,
   });
+
+  // 完成時に記録を保存（1ゲームにつき1度だけ実行）
+  useEffect(() => {
+    if (!isCompleted || hasSavedRecordRef.current || shortestMoves.moves === null) {
+      return;
+    }
+
+    hasSavedRecordRef.current = true;
+    const shortestMovesValue = shortestMoves.moves;
+    const clearSeconds = finalTimeRef.current ?? seconds;
+    const rating = calculateRating(moves, shortestMovesValue);
+
+    const record: PuzzleRecord = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      gridSize: settings.gridSize,
+      shuffleLevel: settings.shuffleLevel,
+      initialBoard: [...initialBoard],
+      moves,
+      elapsedTime: clearSeconds,
+      shortestMoves: shortestMovesValue,
+      rating,
+    };
+
+    const { rank, isNewRecord } = saveRecord(record);
+    setCompletionRating(rating);
+    setCompletionRank(rank > 0 ? rank : null);
+    setCompletionIsNewRecord(isNewRecord);
+  }, [isCompleted, shortestMoves.moves, moves, settings.gridSize, settings.shuffleLevel, initialBoard]);
 
   // 盤面表示完了後にタイマー開始
   useEffect(() => {
@@ -173,6 +218,8 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     if (completionTimeoutRef.current) {
       clearTimeout(completionTimeoutRef.current);
     }
+    hasSavedRecordRef.current = false;
+    finalTimeRef.current = null;
     restartGame();
     resetTimer();
     startTimer();
@@ -184,6 +231,8 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     if (completionTimeoutRef.current) {
       clearTimeout(completionTimeoutRef.current);
     }
+    hasSavedRecordRef.current = false;
+    finalTimeRef.current = null;
     reshuffleGame();
     resetTimer();
     startTimer();
@@ -238,38 +287,45 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
 
       {/* 操作バー */}
       <div className="grid grid-cols-4 gap-2 w-full max-w-md mb-6">
-        <button
-          onClick={handleOpenOriginalModal}
-          className="flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
-        >
-          <Eye className="w-4 h-4 mb-1 text-blue-600" />
-          <span>元画像</span>
-        </button>
+        <Tooltip text="完成見本画像を拡大表示します" position="top" className="w-full">
+          <button
+            onClick={handleOpenOriginalModal}
+            className="w-full flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
+          >
+            <Eye className="w-4 h-4 mb-1 text-blue-600" />
+            <span>元画像</span>
+          </button>
+        </Tooltip>
 
-        <button
-          onClick={handleRestartClick}
-          className="flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
-        >
-          <RotateCcw className="w-4 h-4 mb-1 text-amber-600" />
-          <span>最初から</span>
-        </button>
+        <Tooltip text="現在のパズルを初期配置からやり直します" position="top" className="w-full">
+          <button
+            onClick={handleRestartClick}
+            className="w-full flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
+          >
+            <RotateCcw className="w-4 h-4 mb-1 text-amber-600" />
+            <span>最初から</span>
+          </button>
+        </Tooltip>
 
-        <button
-          onClick={handleReshuffleClick}
-          className="flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
-        >
-          <Shuffle className="w-4 h-4 mb-1 text-purple-600" />
-          <span>再シャッフル</span>
-        </button>
+        <Tooltip text="別の配置に新しく混ぜ直します" position="top" className="w-full">
+          <button
+            onClick={handleReshuffleClick}
+            className="w-full flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
+          >
+            <Shuffle className="w-4 h-4 mb-1 text-purple-600" />
+            <span>再シャッフル</span>
+          </button>
+        </Tooltip>
 
-        <button
-          onClick={handleBackToConfigClick}
-          className="flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
-          title="分割数やシャッフルの度合いを変更"
-        >
-          <Settings className="w-4 h-4 mb-1 text-indigo-600" />
-          <span>設定変更</span>
-        </button>
+        <Tooltip text="ホーム画面（設定・画像変更）に戻ります" position="top" className="w-full">
+          <button
+            onClick={handleBackToConfigClick}
+            className="w-full flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
+          >
+            <Home className="w-4 h-4 mb-1 text-indigo-600" />
+            <span>ホーム</span>
+          </button>
+        </Tooltip>
       </div>
 
       {/* キーボード操作ガイド */}
@@ -308,7 +364,14 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         seconds={seconds}
         completedImageDataUrl={fullImageDataUrlRef.current}
         shortestMovesText={shortestMoves.displayText}
+        rating={completionRating}
+        rank={completionRank}
+        isNewRecord={completionIsNewRecord}
         onRetry={executeReshuffle}
+        onViewRecords={() => {
+          setIsCompletionDialogOpen(false);
+          onViewRecords?.();
+        }}
         onClose={() => setIsCompletionDialogOpen(false)}
       />
 
@@ -320,12 +383,12 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
             ? '最初からやり直しますか？'
             : confirmAction === 'reshuffle'
             ? '別の盤面で再シャッフルしますか？'
-            : 'パズル設定に戻りますか？'
+            : 'ホーム画面に戻りますか？'
         }
         message="現在のパズルの進行状況（手数・経過時間）はリセットされます。"
         confirmLabel={
           confirmAction === 'config'
-            ? '設定に戻る'
+            ? 'ホームに戻る'
             : 'やり直す'
         }
         variant="primary"

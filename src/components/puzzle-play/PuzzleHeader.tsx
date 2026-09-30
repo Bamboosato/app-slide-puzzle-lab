@@ -1,4 +1,5 @@
 import { Pause, Hash, Clock, Footprints, Route } from 'lucide-react';
+import { Tooltip } from '../common/Tooltip';
 
 interface PuzzleHeaderProps {
   moves: number;
@@ -64,29 +65,33 @@ export const PuzzleHeader: React.FC<PuzzleHeaderProps> = ({
         {/* コントロールボタン群 */}
         <div className="flex items-center gap-1.5">
           {/* 番号トグル */}
-          <button
-            onClick={onToggleNumbers}
-            className={`p-2 rounded-xl transition-all ${
-              showNumbers
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-            title="ピース番号の表示/非表示"
-            aria-label="ピース番号の表示切り替え"
-          >
-            <Hash className="w-4 h-4" />
-          </button>
+          <Tooltip text="ピース番号の表示 / 非表示" position="bottom">
+            <button
+              onClick={onToggleNumbers}
+              className={`p-2 rounded-xl transition-all ${
+                showNumbers
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+              title="ピース番号の表示/非表示"
+              aria-label="ピース番号の表示切り替え"
+            >
+              <Hash className="w-4 h-4" />
+            </button>
+          </Tooltip>
 
           {/* 一時停止ボタン */}
-          <button
-            onClick={onPause}
-            disabled={isPaused}
-            className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 active:bg-slate-300 transition-colors"
-            title="一時停止"
-            aria-label="パズルを一時停止"
-          >
-            <Pause className="w-4 h-4" />
-          </button>
+          <Tooltip text="パズルを一時停止する" position="bottom">
+            <button
+              onClick={onPause}
+              disabled={isPaused}
+              className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 active:bg-slate-300 transition-colors"
+              title="一時停止"
+              aria-label="パズルを一時停止"
+            >
+              <Pause className="w-4 h-4" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

@@ -2,7 +2,7 @@ export type GridSize = 3 | 4 | 5 | 6;
 
 export type ShuffleLevel = 'light' | 'standard' | 'hard';
 
-export type ScreenState = 'select' | 'config' | 'play';
+export type ScreenState = 'select' | 'config' | 'play' | 'records';
 
 export interface CropArea {
   x: number; // 0 to 1 relative to source image
