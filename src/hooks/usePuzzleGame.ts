@@ -15,6 +15,7 @@ interface UsePuzzleGameProps {
   shuffleLevel: ShuffleLevel;
   initialShowNumbers?: boolean;
   isInteractionDisabled?: boolean;
+  replayInitialBoard?: number[];   // リプレイ用：指定時はシャッフルをスキップ
   onMoveSuccess?: () => void;
   onCompleted?: () => void;
 }
@@ -24,10 +25,13 @@ export function usePuzzleGame({
   shuffleLevel,
   initialShowNumbers = false,
   isInteractionDisabled = false,
+  replayInitialBoard,
   onMoveSuccess,
   onCompleted,
 }: UsePuzzleGameProps) {
-  const [board, setBoard] = useState<number[]>(() => shuffleBoard(gridSize, shuffleLevel));
+  const [board, setBoard] = useState<number[]>(() =>
+    replayInitialBoard ? [...replayInitialBoard] : shuffleBoard(gridSize, shuffleLevel)
+  );
   const [initialBoard, setInitialBoard] = useState<number[]>(board);
   const [moves, setMoves] = useState(0);
   const [isGameCompleted, setIsGameCompleted] = useState(false);

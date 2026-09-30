@@ -1,23 +1,26 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Play, ZoomIn, ZoomOut, Hash } from 'lucide-react';
+import { Play, ZoomIn, ZoomOut, Hash, Trophy, Upload, RotateCcw, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Button } from '../common/Button';
-import { ProcessedSourceImage, cropImageToSquare, sliceImageToPieces } from '../../logic/imageProcessor';
+import { Tooltip } from '../common/Tooltip';
+import { ProcessedSourceImage, cropImageToSquare, sliceImageToPieces, processImageFile, processImageUrl } from '../../logic/imageProcessor';
 import { GridSize, ShuffleLevel, GameSettings, CropArea } from '../../types/puzzle';
 import { GRID_OPTIONS, SHUFFLE_OPTIONS } from '../../config/constants';
 import { saveSettings } from '../../logic/storage';
 
 interface PuzzleConfigScreenProps {
-  sourceImage: ProcessedSourceImage;
+  sourceImage: ProcessedSourceImage | null;
   initialSettings: GameSettings;
-  onBack: () => void;
   onStart: (pieces: string[], fullCroppedCanvas: HTMLCanvasElement, settings: GameSettings) => void;
+  onViewRecords: (gridSize: GridSize, shuffleLevel: ShuffleLevel) => void;
+  onImageChange: (image: ProcessedSourceImage) => void;
 }
 
 export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
   sourceImage,
   initialSettings,
-  onBack,
   onStart,
+  onViewRecords,
+  onImageChange,
 }) => {
   const [gridSize, setGridSize] = useState<GridSize>(initialSettings.gridSize);
   const [shuffleLevel, setShuffleLevel] = useState<ShuffleLevel>(initialSettings.shuffleLevel);
@@ -29,11 +32,20 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
   const isDraggingRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
+  // 画像変更・ドラッグ＆ドロップ関連
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // クロップ領域の計算（正方形、余白なし制約）
   const calculateCropArea = useCallback((): CropArea => {
+    if (!sourceImage) {
+      return { x: 0, y: 0, width: 1, height: 1 };
+    }
     const { width: imgW, height: imgH } = sourceImage;
     const baseCropSize = Math.min(imgW, imgH);
     const effectiveCropSize = baseCropSize / zoom;
@@ -61,16 +73,21 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const size = 640;
+    canvas.width = size;
+    canvas.height = size;
+
+    if (!sourceImage) {
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, size, size);
+      return;
+    }
+
     const crop = calculateCropArea();
     const sx = crop.x * sourceImage.width;
     const sy = crop.y * sourceImage.height;
     const sWidth = crop.width * sourceImage.width;
     const sHeight = crop.height * sourceImage.height;
-
-    // Retina・高解像度表示対応 (640x640)
-    const size = 640;
-    canvas.width = size;
-    canvas.height = size;
 
     // 1. パズル盤面背景色 (パズル画面の bg-slate-800/95: #1e293b)
     ctx.fillStyle = '#1e293b';
@@ -118,7 +135,7 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
         const isBlank = row === gridSize - 1 && col === gridSize - 1;
 
         if (isBlank) {
-          // 右下の空白ピース（パズル画面の bg-slate-900/60 + border-dashed border-slate-600/40 を忠実に再現）
+          // 右下の空白ピース
           ctx.save();
           ctx.beginPath();
           addRoundRect(ctx, dx, dy, tileSize, tileSize, cornerRadius);
@@ -164,7 +181,7 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
           tileSize
         );
 
-        // ピース上部の微細な立体ハイライトライン (inset_0_1px_0_rgba(255,255,255,0.35))
+        // ピース上部の微細な立体ハイライトライン
         ctx.beginPath();
         ctx.moveTo(dx + cornerRadius, dy + 1.5);
         ctx.lineTo(dx + tileSize - cornerRadius, dy + 1.5);
@@ -172,7 +189,7 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // ピース外周の境界シャドウ (inset_0_0_0_1px_rgba(0,0,0,0.15))
+        // ピース外周の境界シャドウ
         ctx.beginPath();
         addRoundRect(ctx, dx, dy, tileSize, tileSize, cornerRadius);
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
@@ -238,7 +255,77 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
     isDraggingRef.current = false;
   };
 
+  // ファイル選択ハンドラ
+  const handleFileProcess = async (file: File) => {
+    setErrorMessage(null);
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setErrorMessage('JPEG、PNG、または WebP 形式の画像を選択してください。');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const processed = await processImageFile(file);
+      onImageChange(processed);
+      setPan({ x: 0, y: 0 });
+      setZoom(1);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('画像の読み込みに失敗しました。別の画像をお試しください。');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // サンプル画像の再読み込み
+  const handleLoadSample = async () => {
+    setErrorMessage(null);
+    try {
+      setIsProcessing(true);
+      const processed = await processImageUrl('/sample.jpg');
+      onImageChange(processed);
+      setPan({ x: 0, y: 0 });
+      setZoom(1);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('サンプル画像の読み込みに失敗しました。');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFileProcess(e.target.files[0]);
+    }
+    // 同じファイルを再選択できるようにリセット
+    e.target.value = '';
+  };
+
+  // プレビュー枠へのドラッグ＆ドロップハンドラ
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileProcess(e.dataTransfer.files[0]);
+    }
+  };
+
   const handleStartGame = () => {
+    if (!sourceImage) return;
+
     // 設定保存
     saveSettings({ gridSize, shuffleLevel, showNumbers });
 
@@ -252,25 +339,48 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
 
   return (
     <div className="max-w-xl mx-auto px-4 py-6">
-      {/* ナビゲーションバー */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 px-2 py-1 rounded-lg hover:bg-slate-200 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>別の画像を選ぶ</span>
-        </button>
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-          設定
-        </span>
+      {/* ホーム画面ヘッダー */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200/90 p-2 flex items-center justify-center shadow-xs flex-shrink-0">
+            <img
+              src="/favicon.svg"
+              alt="Slide Puzzle Lab ロゴ"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900 leading-tight">
+              Slide Puzzle Lab
+            </h1>
+            <p className="text-[11px] text-slate-500 font-medium">
+              お気に入りの画像で楽しむスライドパズル
+            </p>
+          </div>
+        </div>
+
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold border border-emerald-200/60 shadow-xs">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          <span>完全ローカル</span>
+        </div>
       </div>
 
-      {/* 正方形クロッププレビュー */}
+      {/* 隠しファイル入力 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
+
+      {/* 正方形クロッププレビュー ＆ 画像選択 */}
       <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-200/80 mb-6 flex flex-col items-center">
         <div
           ref={containerRef}
-          className="w-full max-w-[320px] aspect-square rounded-2xl shadow-xl overflow-hidden bg-slate-800/95 border-2 border-slate-700/80 relative cursor-grab active:cursor-grabbing touch-none select-none"
+          className={`w-full max-w-[320px] aspect-square rounded-2xl shadow-xl overflow-hidden bg-slate-800/95 border-2 relative cursor-grab active:cursor-grabbing touch-none select-none transition-colors ${
+            isDragOver ? 'border-blue-500 ring-4 ring-blue-500/20' : 'border-slate-700/80'
+          }`}
           onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
           onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
           onMouseUp={handlePointerUp}
@@ -286,19 +396,72 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
             }
           }}
           onTouchEnd={handlePointerUp}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
-          <canvas
-            ref={previewCanvasRef}
-            className="w-full h-full object-cover pointer-events-none"
-          />
+          {sourceImage ? (
+            <canvas
+              ref={previewCanvasRef}
+              className="w-full h-full object-cover pointer-events-none"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-3">
+              <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs font-medium">画像を準備中...</span>
+            </div>
+          )}
+
+          {/* 画像処理中オーバーレイ */}
+          {isProcessing && (
+            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-2 z-10">
+              <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs font-semibold">画像を処理中...</span>
+            </div>
+          )}
+
+          {/* ドラッグオーバー時の案内表示 */}
+          {isDragOver && (
+            <div className="absolute inset-0 bg-blue-600/80 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-2 z-10 pointer-events-none">
+              <Upload className="w-10 h-10 animate-bounce" />
+              <span className="text-sm font-bold">ここに画像をドロップ</span>
+            </div>
+          )}
         </div>
 
         <p className="text-[11px] text-slate-400 mt-2 text-center">
-          ドラッグして表示位置を調整できます
+          ドラッグで表示位置を移動できます（画像ファイルのドロップも可）
         </p>
 
+        {/* 画像変更ボタンエリア */}
+        <div className="flex items-center gap-2 mt-3 w-full max-w-[320px]">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+            className="flex-1 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 font-bold border border-slate-200/80 shadow-xs"
+            icon={<Upload className="w-3.5 h-3.5 text-blue-600" />}
+          >
+            写真を選ぶ
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleLoadSample}
+            disabled={isProcessing}
+            className="text-slate-600 hover:text-slate-900 border border-slate-200/80 bg-slate-50 hover:bg-slate-100 shadow-xs font-semibold"
+            icon={<RotateCcw className="w-3.5 h-3.5 text-amber-600" />}
+          >
+            サンプル
+          </Button>
+        </div>
+
         {/* ズームスライダー */}
-        <div className="flex items-center gap-3 w-full max-w-[280px] mt-3">
+        <div className="flex items-center gap-3 w-full max-w-[280px] mt-4 pt-3 border-t border-slate-100">
           <ZoomOut className="w-4 h-4 text-slate-400" />
           <input
             type="range"
@@ -312,6 +475,14 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
           />
           <ZoomIn className="w-4 h-4 text-slate-400" />
         </div>
+
+        {/* エラーメッセージ */}
+        {errorMessage && (
+          <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2 w-full max-w-[320px]">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
       </div>
 
       {/* 設定フォーム */}
@@ -397,16 +568,29 @@ export const PuzzleConfigScreen: React.FC<PuzzleConfigScreenProps> = ({
         </div>
       </div>
 
-      {/* 開始ボタン */}
-      <Button
-        variant="primary"
-        size="lg"
-        className="w-full shadow-md"
-        icon={<Play className="w-5 h-5 fill-current" />}
-        onClick={handleStartGame}
-      >
-        パズルを開始する
-      </Button>
+      {/* 開始ボタン & 記録ボタン */}
+      <div className="flex gap-3">
+        <Button
+          variant="primary"
+          size="lg"
+          className="flex-1 shadow-md"
+          icon={<Play className="w-5 h-5 fill-current" />}
+          onClick={handleStartGame}
+          disabled={!sourceImage || isProcessing}
+        >
+          パズルを開始する
+        </Button>
+        <Tooltip text="過去の記録・ランキングを見る" position="top">
+          <Button
+            variant="outline"
+            size="lg"
+            className="shadow-sm"
+            icon={<Trophy className="w-5 h-5" />}
+            onClick={() => onViewRecords(gridSize, shuffleLevel)}
+            aria-label="記録一覧"
+          />
+        </Tooltip>
+      </div>
     </div>
   );
 };

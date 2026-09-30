@@ -21,10 +21,14 @@ export const TILE_ANIMATION_DURATION_MS = 100;
 /** 最短手数探索のタイムアウト時間（ms） */
 export const SHORTEST_MOVES_TIMEOUT_MS = 3000;
 
+/** カテゴリあたりの記録保存上限 */
+export const MAX_RECORDS_PER_CATEGORY = 10;
+
 export const STORAGE_KEYS = {
   GRID_SIZE: 'slide_puzzle_grid_size',
   SHUFFLE_LEVEL: 'slide_puzzle_shuffle_level',
   SHOW_NUMBERS: 'slide_puzzle_show_numbers',
+  RECORDS: 'slide_puzzle_records',
 } as const;
 
 export const DEFAULT_SETTINGS: GameSettings = {
