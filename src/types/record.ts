@@ -11,6 +11,7 @@ export interface PuzzleRecord {
   elapsedTime: number;           // 経過時間（秒）
   shortestMoves: number;         // 最短手数
   rating: number;                // ★評価（0〜3）
+  shortestMovesKind?: 'exact' | 'lower_bound' | 'unknown'; // 最短手数の根拠（厳密解、下限値、旧記録等未確認）
 }
 
 /** カテゴリキー */

@@ -4,7 +4,7 @@ import { PuzzleRecord } from '../../types/record';
 import { usePuzzleGame } from '../../hooks/usePuzzleGame';
 import { useTimer } from '../../hooks/useTimer';
 import { useShortestMoves } from '../../hooks/useShortestMoves';
-import { saveRecord, calculateRating } from '../../logic/recordStorage';
+import { saveRecord, calculateRating, resolveShortestMovesKind } from '../../logic/recordStorage';
 import { PuzzleHeader } from './PuzzleHeader';
 import { PuzzleBoard } from './PuzzleBoard';
 import { PauseOverlay } from './PauseOverlay';
@@ -43,6 +43,9 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
   const [completionRating, setCompletionRating] = useState(0);
   const [completionRank, setCompletionRank] = useState<number | null>(null);
   const [completionIsNewRecord, setCompletionIsNewRecord] = useState(false);
+  const [completionShortestMovesKind, setCompletionShortestMovesKind] = useState<
+    'exact' | 'lower_bound' | 'unknown' | undefined
+  >(undefined);
 
   const fullImageDataUrlRef = useRef<string>('');
   if (!fullImageDataUrlRef.current) {
@@ -126,9 +129,14 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     gridSize: settings.gridSize,
   });
 
-  // 完成時に記録を保存（1ゲームにつき1度だけ実行）
+  // 完成時に記録を保存（1ゲームにつき1度だけ実行、最短手数計算完了後に保存）
   useEffect(() => {
-    if (!isCompleted || hasSavedRecordRef.current || shortestMoves.moves === null) {
+    if (!isCompleted || hasSavedRecordRef.current) {
+      return;
+    }
+
+    const kind = resolveShortestMovesKind(shortestMoves.status);
+    if (!kind || shortestMoves.moves === null) {
       return;
     }
 
@@ -147,13 +155,24 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
       elapsedTime: clearSeconds,
       shortestMoves: shortestMovesValue,
       rating,
+      shortestMovesKind: kind,
     };
 
     const { rank, isNewRecord } = saveRecord(record);
     setCompletionRating(rating);
     setCompletionRank(rank > 0 ? rank : null);
     setCompletionIsNewRecord(isNewRecord);
-  }, [isCompleted, shortestMoves.moves, moves, settings.gridSize, settings.shuffleLevel, initialBoard]);
+    setCompletionShortestMovesKind(kind);
+  }, [
+    isCompleted,
+    shortestMoves.status,
+    shortestMoves.moves,
+    moves,
+    seconds,
+    settings.gridSize,
+    settings.shuffleLevel,
+    initialBoard,
+  ]);
 
   // 盤面表示完了後にタイマー開始
   useEffect(() => {
@@ -220,6 +239,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     }
     hasSavedRecordRef.current = false;
     finalTimeRef.current = null;
+    setCompletionShortestMovesKind(undefined);
     restartGame();
     resetTimer();
     startTimer();
@@ -233,6 +253,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
     }
     hasSavedRecordRef.current = false;
     finalTimeRef.current = null;
+    setCompletionShortestMovesKind(undefined);
     reshuffleGame();
     resetTimer();
     startTimer();
@@ -361,9 +382,10 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
       <CompletionDialog
         isOpen={isCompleted && isCompletionDialogOpen}
         moves={moves}
-        seconds={seconds}
+        seconds={finalTimeRef.current ?? seconds}
         completedImageDataUrl={fullImageDataUrlRef.current}
         shortestMovesText={shortestMoves.displayText}
+        shortestMovesKind={completionShortestMovesKind ?? (resolveShortestMovesKind(shortestMoves.status) ?? undefined)}
         rating={completionRating}
         rank={completionRank}
         isNewRecord={completionIsNewRecord}

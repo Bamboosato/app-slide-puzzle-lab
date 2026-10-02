@@ -2,6 +2,8 @@ import { GridSize, ShuffleLevel } from '../types/puzzle';
 import { PuzzleRecord, RecordCategoryKey } from '../types/record';
 import { STORAGE_KEYS, MAX_RECORDS_PER_CATEGORY } from '../config/constants';
 
+import { ShortestMovesStatus } from './solver/types';
+
 type RecordsStore = Record<RecordCategoryKey, PuzzleRecord[]>;
 
 export function getCategoryKey(gridSize: GridSize, shuffleLevel: ShuffleLevel): RecordCategoryKey {
@@ -9,7 +11,9 @@ export function getCategoryKey(gridSize: GridSize, shuffleLevel: ShuffleLevel): 
 }
 
 export function calculateRating(moves: number, shortestMoves: number): number {
-  if (shortestMoves === 0) return 0; // Fallback
+  if (!Number.isFinite(shortestMoves) || shortestMoves <= 0 || !Number.isFinite(moves) || moves < 0) {
+    return 0;
+  }
   const ratio = moves / shortestMoves;
   if (ratio <= 1.0) return 3;
   if (ratio <= 1.5) return 2;
@@ -17,11 +21,53 @@ export function calculateRating(moves: number, shortestMoves: number): number {
   return 0;
 }
 
+/** 最短手数の計算ステータスから記録用の根拠種別を解決する */
+export function resolveShortestMovesKind(
+  status: ShortestMovesStatus
+): 'exact' | 'lower_bound' | null {
+  if (status === 'exact') return 'exact';
+  if (status === 'lower_bound' || status === 'timeout' || status === 'error') {
+    return 'lower_bound';
+  }
+  return null; // 'idle' または 'calculating' のときは確定を待つ
+}
+
+/** レコードを正規化（旧記録の未設定フィールドをunknownに設定） */
+export function normalizeRecord(record: PuzzleRecord): PuzzleRecord {
+  return {
+    ...record,
+    shortestMovesKind: record.shortestMovesKind ?? 'unknown',
+  };
+}
+
+/** 記録一覧等の表示用最短手数文字列フォーマット */
+export function formatRecordShortestMoves(
+  shortestMoves: number,
+  kind?: 'exact' | 'lower_bound' | 'unknown'
+): string {
+  const actualKind = kind ?? 'unknown';
+  if (actualKind === 'exact') {
+    return `最短${shortestMoves}手`;
+  }
+  if (actualKind === 'lower_bound') {
+    return `最短${shortestMoves}手以上`;
+  }
+  return `最短${shortestMoves}手（未確認）`;
+}
+
 function loadAllRecords(): RecordsStore {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.RECORDS);
     if (!data) return {} as RecordsStore;
-    return JSON.parse(data) as RecordsStore;
+    const parsed = JSON.parse(data) as RecordsStore;
+    const normalizedStore: RecordsStore = {} as RecordsStore;
+    for (const key of Object.keys(parsed) as RecordCategoryKey[]) {
+      const list = parsed[key];
+      if (Array.isArray(list)) {
+        normalizedStore[key] = list.map(normalizeRecord);
+      }
+    }
+    return normalizedStore;
   } catch (error) {
     console.error('Failed to load records from localStorage:', error);
     return {} as RecordsStore;
@@ -120,7 +166,8 @@ export function calculateRank(
     moves,
     elapsedTime,
     shortestMoves: 0,
-    rating
+    rating,
+    shortestMovesKind: 'unknown',
   };
   
   const combined = [...records, dummyRecord];

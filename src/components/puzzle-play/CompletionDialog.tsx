@@ -9,6 +9,7 @@ interface CompletionDialogProps {
   seconds: number;
   completedImageDataUrl?: string;
   shortestMovesText?: string;
+  shortestMovesKind?: 'exact' | 'lower_bound' | 'unknown';
   rating: number;           // ★評価（0〜3）
   rank: number | null;      // ランキング順位（null = ランク外）
   isNewRecord: boolean;     // 新記録かどうか
@@ -35,13 +36,18 @@ function renderStars(rating: number): React.ReactNode {
 }
 
 /** ★評価のラベル */
-function ratingLabel(rating: number): string {
+function ratingLabel(rating: number, kind?: 'exact' | 'lower_bound' | 'unknown'): string {
+  let baseLabel = '';
   switch (rating) {
-    case 3: return 'パーフェクト！';
-    case 2: return '優秀！';
-    case 1: return '良い！';
-    default: return '完成！';
+    case 3: baseLabel = 'パーフェクト！'; break;
+    case 2: baseLabel = '優秀！'; break;
+    case 1: baseLabel = '良い！'; break;
+    default: baseLabel = '完成！'; break;
   }
+  if (kind && kind !== 'exact') {
+    return `${baseLabel}（参考）`;
+  }
+  return baseLabel;
 }
 
 export const CompletionDialog: React.FC<CompletionDialogProps> = ({
@@ -50,6 +56,7 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
   seconds,
   completedImageDataUrl,
   shortestMovesText,
+  shortestMovesKind,
   rating,
   rank,
   isNewRecord,
@@ -99,7 +106,9 @@ export const CompletionDialog: React.FC<CompletionDialogProps> = ({
         {/* ★評価 */}
         <div className="mb-2">
           <div className="text-base">{renderStars(rating)}</div>
-          <div className="text-xs font-bold text-slate-700 mt-0.5">{ratingLabel(rating)}</div>
+          <div className="text-xs font-bold text-slate-700 mt-0.5" data-testid="completion-rating-label">
+            {ratingLabel(rating, shortestMovesKind)}
+          </div>
         </div>
 
         {/* 成績カード */}
