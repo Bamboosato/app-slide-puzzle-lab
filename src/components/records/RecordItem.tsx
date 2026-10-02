@@ -2,6 +2,7 @@ import { RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Tooltip } from '../common/Tooltip';
 import { PuzzleRecord } from '../../types/record';
+import { formatRecordShortestMoves } from '../../logic/recordStorage';
 
 interface RecordItemProps {
   record: PuzzleRecord;
@@ -34,6 +35,9 @@ export function RecordItem({ record, rank, onReplay, onDelete }: RecordItemProps
     return <span className="text-slate-500 text-lg font-bold w-6 text-center inline-block">{r}</span>;
   };
 
+  const kind = record.shortestMovesKind ?? 'unknown';
+  const isReference = kind === 'lower_bound' || kind === 'unknown';
+
   const maxStars = 3;
   const ratingStars = Array.from({ length: maxStars }).map((_, i) => (
     <span key={i} className={i < record.rating ? "text-amber-500" : "text-slate-300"}>
@@ -50,7 +54,12 @@ export function RecordItem({ record, rank, onReplay, onDelete }: RecordItemProps
         
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <div className="text-lg tracking-widest leading-none">{ratingStars}</div>
+            <div className="flex items-center gap-1">
+              <div className="text-lg tracking-widest leading-none">{ratingStars}</div>
+              {isReference && (
+                <span className="text-xs text-slate-500 font-medium">（参考）</span>
+              )}
+            </div>
             <span className="text-xs text-slate-500">{formatDate(record.timestamp)}</span>
           </div>
           
@@ -60,7 +69,9 @@ export function RecordItem({ record, rank, onReplay, onDelete }: RecordItemProps
             </div>
             <div className="text-sm text-slate-600">
               <span className="font-semibold">{record.moves}</span>手
-              <span className="text-xs text-slate-400 ml-1">(最短{record.shortestMoves}手)</span>
+              <span className="text-xs text-slate-400 ml-1">
+                ({formatRecordShortestMoves(record.shortestMoves, kind)})
+              </span>
             </div>
           </div>
         </div>
