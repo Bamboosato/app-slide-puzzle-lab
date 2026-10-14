@@ -95,7 +95,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between overflow-x-hidden">
-      <main className="flex-1 flex flex-col justify-start sm:justify-center py-2 sm:py-4">
+      <main className="flex-1 flex flex-col justify-start sm:justify-center py-1 sm:py-4">
         {screen === 'config' && (
           <PuzzleConfigScreen
             sourceImage={sourceImage}
