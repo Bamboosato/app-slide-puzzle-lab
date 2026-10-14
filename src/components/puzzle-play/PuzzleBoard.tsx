@@ -28,16 +28,16 @@ export const PuzzleBoard: React.FC<PuzzleBoardProps> = ({
   const totalTiles = gridSize * gridSize;
   const blankId = totalTiles - 1;
 
-  // グリッドギャップ（スマホ実機でも自然に境界がわかる 4px / 3px / 2px の最適比率）
+  // グリッドギャップ（ピース境界の識別性を保ちつつ、スマホでは外枠パディングを最小化してパズル画像を最大化）
   const gapClass =
     gridSize === 3
-      ? 'gap-1 p-2'
+      ? 'gap-1 p-1 sm:p-2'
       : gridSize <= 5
-      ? 'gap-[3px] p-1.5'
-      : 'gap-[2px] p-1.5';
+      ? 'gap-[3px] p-1 sm:p-1.5'
+      : 'gap-[2px] p-0.5 sm:p-1.5';
 
   return (
-    <div className="w-full max-w-md mx-auto aspect-square bg-slate-800/95 rounded-2xl shadow-xl overflow-hidden border-2 border-slate-700/80 touch-none">
+    <div className="w-full max-w-[480px] sm:max-w-md mx-auto aspect-square bg-slate-800/95 rounded-xl sm:rounded-2xl shadow-xl overflow-hidden border border-slate-700/80 sm:border-2 touch-none">
       <div
         className={`w-full h-full grid ${gapClass}`}
         style={{

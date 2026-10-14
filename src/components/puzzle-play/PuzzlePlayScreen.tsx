@@ -279,7 +279,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-4 sm:py-6 flex flex-col items-center">
+    <div className="w-full max-w-xl mx-auto px-1 sm:px-4 py-1 sm:py-6 flex flex-col items-center">
       {/* ヘッダー情報（手数、タイマー、ポーズ、番号トグル、最短手数） */}
       <PuzzleHeader
         moves={moves}
@@ -293,7 +293,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
       />
 
       {/* パズル盤面 */}
-      <div className="w-full flex justify-center mb-5">
+      <div className="w-full flex justify-center mb-2.5 sm:mb-5">
         <PuzzleBoard
           board={board}
           gridSize={settings.gridSize}
@@ -307,11 +307,11 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
       </div>
 
       {/* 操作バー */}
-      <div className="grid grid-cols-4 gap-2 w-full max-w-md mb-6">
+      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full max-w-[480px] sm:max-w-md mb-4 sm:mb-6">
         <Tooltip text="完成見本画像を拡大表示します" position="top" className="w-full">
           <button
             onClick={handleOpenOriginalModal}
-            className="w-full flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
+            className="w-full flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
           >
             <Eye className="w-4 h-4 mb-1 text-blue-600" />
             <span>元画像</span>
@@ -321,7 +321,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         <Tooltip text="現在のパズルを初期配置からやり直します" position="top" className="w-full">
           <button
             onClick={handleRestartClick}
-            className="w-full flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
+            className="w-full flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
           >
             <RotateCcw className="w-4 h-4 mb-1 text-amber-600" />
             <span>最初から</span>
@@ -331,7 +331,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         <Tooltip text="別の配置に新しく混ぜ直します" position="top" className="w-full">
           <button
             onClick={handleReshuffleClick}
-            className="w-full flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
+            className="w-full flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
           >
             <Shuffle className="w-4 h-4 mb-1 text-purple-600" />
             <span>再シャッフル</span>
@@ -341,7 +341,7 @@ export const PuzzlePlayScreen: React.FC<PuzzlePlayScreenProps> = ({
         <Tooltip text="ホーム画面（設定・画像変更）に戻ります" position="top" className="w-full">
           <button
             onClick={handleBackToConfigClick}
-            className="w-full flex flex-col items-center justify-center py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
+            className="w-full flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 bg-white hover:bg-slate-50 text-slate-700 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200/80 transition-all active:scale-95 text-xs font-bold"
           >
             <Home className="w-4 h-4 mb-1 text-indigo-600" />
             <span>ホーム</span>
